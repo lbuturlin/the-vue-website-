@@ -1,7 +1,63 @@
 <script setup>
+import { onMounted, onUnmounted, ref } from 'vue'
 import logoUrl from './assets/logos/TheVue-Compact-Gold.png'
+import footerLogoUrl from './assets/logos/TheVue-Primary-Gold.png'
 import heroImage from './assets/images/Hero_Placeholder.jpeg'
-import boatImage from './assets/images/Boat_3.jpg'
+import boatImageOne from './assets/images/Boat_1.jpg'
+import boatImageTwo from './assets/images/Boat_2.jpg'
+import boatImageThree from './assets/images/Boat_3.jpg'
+
+const boatImages = [
+  { src: boatImageOne, alt: 'Aerial view of a boat on turquoise Whitsundays water' },
+  { src: boatImageTwo, alt: 'Boat travelling along the Whitsundays coastline' },
+  { src: boatImageThree, alt: 'Boat beside the Whitsundays shore' },
+]
+
+const activeBoatSlide = ref(0)
+const isBoatSlideshowPlaying = ref(true)
+let boatSlideshowTimer
+
+function showBoatSlide(index) {
+  activeBoatSlide.value = (index + boatImages.length) % boatImages.length
+}
+
+function startBoatSlideshow() {
+  window.clearInterval(boatSlideshowTimer)
+  isBoatSlideshowPlaying.value = true
+  boatSlideshowTimer = window.setInterval(() => {
+    showBoatSlide(activeBoatSlide.value + 1)
+  }, 6500)
+}
+
+function stopBoatSlideshow() {
+  window.clearInterval(boatSlideshowTimer)
+  isBoatSlideshowPlaying.value = false
+}
+
+function toggleBoatSlideshow() {
+  if (isBoatSlideshowPlaying.value) {
+    stopBoatSlideshow()
+  } else {
+    startBoatSlideshow()
+  }
+}
+
+onMounted(async () => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    isBoatSlideshowPlaying.value = false
+    return
+  }
+
+  await Promise.all(boatImages.map(({ src }) => {
+    const image = new Image()
+    image.src = src
+    return image.decode().catch(() => undefined)
+  }))
+
+  startBoatSlideshow()
+})
+
+onUnmounted(stopBoatSlideshow)
 </script>
 
 <template>
@@ -26,7 +82,7 @@ import boatImage from './assets/images/Boat_3.jpg'
     </header>
 
     <main>
-      <section class="hero">
+      <section id="home" class="hero">
         <div class="hero-visual" aria-label="Hero image for the main banner">
           <img :src="heroImage" alt="The Vue hero placeholder" class="hero-image" />
 
@@ -99,18 +155,55 @@ import boatImage from './assets/images/Boat_3.jpg'
         </div>
       </section>
 
-      <section id="the-boat" class="showcase-panel">
-        <div class="showcase-visual">
-          <img :src="boatImage" alt="The boat and coastline" />
+      <section id="the-boat" class="boat-experience">
+        <div class="showcase-panel">
+          <div class="showcase-visual" role="region" aria-label="The Vue boat photos" aria-roledescription="carousel">
+            <img
+              v-for="(image, index) in boatImages"
+              :key="image.src"
+              :src="image.src"
+              :alt="image.alt"
+              :class="['boat-slide', { 'is-active': index === activeBoatSlide }]"
+              :aria-hidden="index !== activeBoatSlide"
+            />
+          </div>
+          <div class="showcase-copy">
+            <p class="eyebrow">The boat</p>
+            <h2>A private passage through the Whitsundays.</h2>
+            <p>
+              Spend long afternoons drifting between hidden coves, quiet anchorages, and untouched shores,
+              accompanied by a tailored route and attentive crew.
+            </p>
+            <a href="#contact" class="boat-cta">Discover private charters</a>
+          </div>
+          <div class="boat-carousel-controls" role="group" aria-label="Boat slideshow controls">
+            <button class="boat-carousel-arrow" type="button" aria-label="Previous photo" @click="showBoatSlide(activeBoatSlide - 1)">‹</button>
+            <div class="boat-carousel-dots" aria-label="Choose a boat photo">
+              <button
+                v-for="(image, index) in boatImages"
+                :key="image.src"
+                class="boat-carousel-dot"
+                :class="{ 'is-active': index === activeBoatSlide }"
+                type="button"
+                :aria-label="`Show photo ${index + 1}`"
+                :aria-pressed="index === activeBoatSlide"
+                @click="showBoatSlide(index)"
+              ></button>
+            </div>
+            <button class="boat-carousel-arrow" type="button" aria-label="Next photo" @click="showBoatSlide(activeBoatSlide + 1)">›</button>
+            <button
+              class="boat-carousel-toggle"
+              type="button"
+              :aria-label="isBoatSlideshowPlaying ? 'Pause slideshow' : 'Play slideshow'"
+              :aria-pressed="isBoatSlideshowPlaying"
+              @click="toggleBoatSlideshow"
+            >{{ isBoatSlideshowPlaying ? 'Pause' : 'Play' }}</button>
+          </div>
         </div>
-        <div class="showcase-copy">
-          <p class="eyebrow eyebrow-dark">The boat</p>
-          <h2>Discover the coastline from the water.</h2>
-          <p>
-            Spend long afternoons drifting between hidden coves, quiet anchorages, and untouched shores,
-            accompanied by a tailored route and attentive crew.
-          </p>
-          <a href="#contact" class="inline-link">Request a charter</a>
+        <div class="boat-details" aria-label="Boat experience highlights">
+          <p class="boat-detail">Tailored routes</p>
+          <p class="boat-detail">Quiet anchorages</p>
+          <p class="boat-detail">Secluded shores</p>
         </div>
       </section>
 
@@ -152,11 +245,19 @@ import boatImage from './assets/images/Boat_3.jpg'
 
     <footer id="contact" class="footer">
       <div class="footer-inner">
-        <div>
-          <p class="eyebrow eyebrow-dark">Enquire</p>
-          <h2>Begin your next escape.</h2>
-        </div>
-        <a href="mailto:hello@thevue.com" class="nav-cta footer-cta">Enquire</a>
+        <a href="#home" class="footer-brand" aria-label="The Vue home">
+          <img :src="footerLogoUrl" alt="The Vue" class="footer-logo" />
+        </a>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a href="#home">Home</a>
+          <a href="#retreat">Retreat</a>
+          <a href="#experiences">Experiences</a>
+          <a href="#the-boat">The Boat</a>
+          <a href="#gallery">Gallery</a>
+          <a href="#about">About</a>
+        </nav>
+        <a href="mailto:hello@thevue.com" class="footer-cta">Enquire</a>
+        <p class="footer-copyright">© The Vue Hamilton Island Private Retreat 2026. All Rights Reserved.</p>
       </div>
     </footer>
   </div>
